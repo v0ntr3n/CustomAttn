@@ -11,6 +11,22 @@ class QKNormGatedCrossAttn(nn.Module):
         self._built = False
         self.context_proj = None
         self.head_gain = None
+
+
+    @staticmethod
+    def _num_heads(attn):
+        return getattr(attn, "heads", getattr(attn, "num_heads", None))
+
+    @staticmethod
+    def _head_dim(attn):
+        # diffusers≥0.27 usually has dim_head; older forks used head_dim
+        if hasattr(attn, "head_dim"):  # rare
+            return attn.head_dim
+        if hasattr(attn, "dim_head"):
+            return attn.dim_head
+        # fallback: infer from to_q out_features
+        return attn.to_q.out_features // QKNormGatedCrossAttn._num_heads(attn)
+    
     def _lazy_build(self, encoder_hidden_states, num_heads, device, dtype):
         if self._built:
             return
